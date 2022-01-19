@@ -1,10 +1,18 @@
 import pygame
 import os
 import sys
-import PIL
 from Mario_Map import *
 
+
 pygame.init()
+
+
+def up_mask(sprite1, sprite2):
+    print(sprite1.rect.center[1], sprite2.rect.top)
+    if sprite1.rect.center[1] < sprite2.rect.top:
+        print('Yes')
+    else:
+        print('no')
 
 
 def collidepoint_by_mask(sprite, group_sprite):
@@ -15,48 +23,78 @@ def collidepoint_by_mask(sprite, group_sprite):
     return new
 
 
-def get_nearest_block(sprite, speed_x, size_block):
-    q1 = (sprite.rect.x - 5 * speed_x + get_offset(sprite.image)[2])
-    q2 = (sprite.rect.x - 5 * speed_x + sprite.width - get_offset(sprite.image)[3])
-    x1 = q1 // size_block
-    if q2 % size_block == 0:
-        x2 = q2 // size_block
-    else:
-        x2 = q2 // size_block + 1
-
+def get_nearest_block(sprite, size_block, off):
+    q1 = (sprite.rect.x + get_offset(sprite.image)[2] + off)
+    q2 = (sprite.rect.x + sprite.image.get_width() - get_offset(sprite.image)[3] + off)
+    x1 = (q1 // size_block)
+    x2 = (q2 // size_block)
     z = sprite.rect.y + sprite.rect.height - get_offset(sprite.image)[1] - 34
+    z1 = sprite.rect.y + get_offset(sprite.image)[0] - 34
+    y = z // size_block
+    y1 = z1 // size_block
     if z % size_block != 0:
-        y = z // size_block + 1
-    else:
-        y = z // size_block
+        y += 1
+    if z1 % size_block != 0:
+        y1 += 1
     mapp = World1_1.map
-    new = []
+    new, new_up, new_left, new_right = [], [], [], []
+    if y > len(mapp) or x2 < 0:
+        return ('kill',)
+    if x2 - x1 == 2:
+        x2 -= 1
+    if y1 == y:
+        y1 -= 1
+    #print(x1, x2, y1, y)
     for i in range(x1, x2 + 1):
         for j in range(y, len(mapp)):
-            if mapp[j][i] in [3, 4, 9]:
-                new.append((j, i))
+            if mapp[j][i] in [3, 4, 9, 13, 15]:
+                new.append((j, i, mapp[j][i]))
+                continue
+    for i in range(x1, x2 + 1):
+        for j in range(0, y1):
+            if mapp[j][i] in [3, 4, 9, 13, 15]:
+                new_up.append((j, i, mapp[j][i]))
+                continue
     if len(new) != 0:
-        mini = sorted(new)[0][0]
-        return mini * size_block - z   #расстояние до ближайшего блока при падении
-    return None  #все свободно
+        mini = sorted(new)[0]
+        mini = (mini[0] * size_block - z, mini[-1])   #расстояние до ближайшего блока при падении
+    else: mini = None, None  #все свободно
+    if len(new_up) != 0:
+        mini1 = sorted(new_up)[-1]
+        mini1 = ((sprite.rect.y + get_offset(sprite.image)[0]) - (mini1[0] + 1) * size_block - 34, mini1[-1])
+    else: mini1 = None, None
+
+    for i in range(y1, y):
+        for j in range(0, x1):
+            if mapp[i][j] in [3, 4, 9, 13, 15]:
+                new_left.append((j, i, mapp[i][j]))
+                continue
+    if len(new_left) != 0:
+        mini2 = sorted(new_left)[-1]
+        mini2 = (q1 - (mini2[0] + 1) * size_block, mini2[-1])   #расстояние до ближайшего блока при падении
+    else: mini2 = None, None  #все свободно
+
+    for i in range(y1, y):
+        for j in range(x2 + 1, len(mapp[0])):
+            if mapp[i][j] in [3, 4, 9, 13, 15]:
+                new_right.append((j, i, mapp[i][j]))
+                continue
+    if len(new_right) != 0:
+        mini3 = sorted(new_right)[0]
+        mini3 = (mini3[0] * size_block - q2, mini3[-1])   #расстояние до ближайшего блока при падении
+    else: mini3 = None, None
+    #print(sorted(new_left), sorted(new_right))#все свободно
+    #print('minis', mini, mini1, mini2, mini3)
+    return mini, mini1, mini2, mini3
 
 
-def down_or_side_collidepoint(sprite1, sprite2): #первый сверху, второй снизу или первый левее, второй правее
-    if pygame.sprite.collide_mask(sprite1, sprite2):
-        if sprite1.rect.y + sprite1.rect.height - get_offset(sprite1.image)[1] - 1 > sprite2.rect.y - get_offset(sprite2.image)[0]:
-            return 'UP'
-        if sprite1.rect.x + sprite1.rect.width - get_offset(sprite1.image)[3] - 1 < sprite2.rect.x - get_offset(sprite2.image)[2]:
-            return 'LEFT'
-
-
-def find_length(sprite1, sprite2):
-        return [sprite1.rect.x + sprite1.rect.width - get_offset(sprite1.image)[3] - (sprite2.rect.x - get_offset(sprite2.image)[2]),
-                (sprite1.rect.y + sprite1.rect.height - get_offset(sprite1.image)[1]) - (sprite2.rect.y - get_offset(sprite2.image)[0])]
-        #список из 2 значений - по оси х и у. отрицательное - объукт 1 левее объекта 2.  отрицательное - объект 1 сверху, объекта 2
-
-
-
-
+def make_tube(number, x, y, object, map, *arg):
+    map[y][x] = [map[y][x], 15]
+    for i in range(2):
+        for j in range(number - 8):
+            object(x + i, y - j, arg)
+            map[y - j][x + i] = 15
+    return map
 
 def flip(images):
     for i in range(len(images)):
@@ -70,7 +108,8 @@ def get_offset(image):
     up = min(map(lambda x: x[1], z))
     left = min(map(lambda x: x[0], z))
     right = max(map(lambda x: x[0], z))
-    return up - 1, image.get_height() - down - 1, left - 1, image.get_width() - right - 1
+
+    return up, image.get_height() - down - 1, left - 1, image.get_width() - right - 1
 
 
 def cut_sheet(self, sheet, columns, rows, a1, a2, b1, b2):

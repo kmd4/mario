@@ -12,28 +12,11 @@ class Base(pygame.sprite.Sprite):
 
     def __init__(self, x, y, *group):
         global k
-        try:
-            super().__init__(*group)
-            self.image = self.image
-            self.rect = self.image.get_rect()
-            self.rect.bottomleft = (self.width * x + self.offset_x, self.height * (y + 1) + self.offset_y)
-        except:
-            k += 1
-            print(*group)
+        super().__init__(*group)
+        self.image = self.image
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (self.width * x + self.offset_x, self.height * (y + 1) + self.offset_y)
 
-
-    def beat_block_1(self):
-        pass
-
-    def beat_block_0(self):
-        pass
-
-    def beat_block(self, mario_size): #большой(1) или маленький(0) марио
-        if mario_size == 1 and self.can_i_beat_it:
-            self.beat_block_1()
-            self.kill()
-        elif mario_size == 0 and self.can_i_beat_it:
-            self.beat_block_0()
 
     def play(self): #мигание
         pass
@@ -61,7 +44,6 @@ class Brick(Base):
         pass
 
     def beat_block_0(self):
-        #приподнимается и возвращается на место
         pass
 
 
@@ -101,16 +83,23 @@ class Bonus(Base):
     def __init__(self, x, y, arg, *group): #arg - список всех объектов (монеты, ускорители), выпадающих из куба
         super().__init__(x, y, *group)
         self.arg = arg
-        self.timers = [15, 10, 10]
+        self.timers = [5, 3, 3]
         self.timer = self.timers[0]
 
-    def play(self):
+    def play(self, offset):
         if len(self.arg) != 0 and self.timer == 0:
             self.image = self.images[(self.images.index(self.image) + 1) % 3]
             self.timer = self.timers[self.images.index(self.image)]
-        elif len(self.arg) == 0:
-            self.image = self.images[-1]
         self.timer -= 1
+
+
+    def push(self, *args):
+        if args and args[0].type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(args[0].pos):
+            if len(self.arg) == 1:
+                self.image = self.images[-1]
+            new_object = self.arg.pop(0)
+            return new_object, self.rect.midtop #number of new_object
+
 
 
 class Tube_Small(Base):
@@ -137,8 +126,8 @@ class Castle(Base):
     image = load_image('castle1.png')
 
 
-class Flag_stick(Base):
-    image = load_image('flag_stick.png')
+class None_tube(Base):
+    image = load_image('None_tube.png', width=32, height=32)
 
 
 
