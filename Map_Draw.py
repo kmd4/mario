@@ -5,94 +5,145 @@ from Background_sprites import *
 from Mario_Map import *
 from Heros_sprite import *
 
-pygame.init()
-size = width, height = 800, 450
-screen = pygame.display.set_mode(size)
-clock = pygame.time.Clock()
-FPS = 30
-
-all_sprites = pygame.sprite.Group()
-first = pygame.sprite.Group()
-second = pygame.sprite.Group()
-notouch = pygame.sprite.Group()
-touch_but_nomove = pygame.sprite.Group()
-player = pygame.sprite.Group()
-play = pygame.sprite.Group()
-power = pygame.sprite.Group()
-ground = pygame.sprite.Group()
-enemy = pygame.sprite.Group()
-bonus = pygame.sprite.Group()
-brick = pygame.sprite.Group()
-ground_block = pygame.sprite.Group()
-tube = pygame.sprite.Group()
-zero = pygame.sprite.Group()
-sp = [None, Cloud, Big_Cloud, Brick, Ground, Bush, Big_Bush, Hill, Big_Hill, Bonus, Tube_Small, Tube_Sr, Tube_Big,
-          Block, Castle, None_tube, Turtle_Green, Mushrooms, Money, Mushroom_Power, Mario]
-
-
-def generate_level(level, bonuss):
-    mario = None
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] in [1, 2, 5, 6, 7, 8, 14]:
-                sp[level[y][x]](x, y, all_sprites, notouch, first)
-            elif level[y][x] in [10, 11, 12]:
-                sp[level[y][x]](x, y, all_sprites, ground_block, touch_but_nomove, first)
-                level = make_tube(level[y][x], x, y, sp[15], level, all_sprites, ground, brick, ground_block, touch_but_nomove, zero)
-            elif level[y][x] == 9 and ((x != 0 and level[y][x - 1] == 0) or (x != len(level[y]) - 1 and level[y][x + 1] == 0)):
-                sp[level[y][x]](x, y, bonuss.pop(0), all_sprites, brick, bonus, ground, play, touch_but_nomove, first)
-            elif level[y][x] == 9:
-                sp[level[y][x]](x, y, bonuss.pop(0), all_sprites, bonus, brick, ground, play, touch_but_nomove, first)
-            elif level[y][x] in [3, 4]:
-                sp[level[y][x]](x, y, all_sprites, ground, brick, touch_but_nomove, first)
-            elif level[y][x] == 13:
-                sp[level[y][x]](x, y, all_sprites, ground, brick, ground_block, touch_but_nomove, first)
-            elif level[y][x] in [16, 17]:
-                sp[level[y][x]](x, y, [ground_block, ground, ground_block], enemy,  all_sprites, play, second)
-            elif level[y][x] == 20:
-                mario = sp[level[y][x]](x, y, 'm', [enemy, ground, brick, touch_but_nomove, ground_block, tube], all_sprites, player, second)
-    return mario
-
-
-map = World1_1.map
-bonuses = World1_1().bonuses
-mario = generate_level(map, bonuses)
-mario.rect.x = 0
 
 class Camera:
-    def __init__(self):
+    def __init__(self, width, *sprites_need_start):
         self.dx = 0
+        self.width = width
         self.x = 0
+        self.sprites_need_start = sprites_need_start
 
     # позиционировать камеру на объекте target
-    def update(self, obj):
-        print(mario.rect)
-        if mario.rect.x > height // 2:
-            self.dx = mario.rect.x - (height // 2)
-            print(self.dx)
+    def update(self, obj, mario):
+        if mario.rect.x > self.width // 2:
+            self.dx = mario.rect.x - (self.width // 2)
             self.x += self.dx
             for el in obj:
                 el.rect.x -= self.dx
-camera = Camera()
+            print('X', self.x)
+        for el in self.sprites_need_start:
+            if self.x == 0:
+                start_sprite(el, self.width)
+            else:
+                start_sprite(el, mario.rect.x + self.width // 2)
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+class Map():
+    def __init__(self, number):
+        self.sp1 = [World_1, World_2]
+        self.map = self.sp1[number - 1].map.copy()
+        self.bonuss = self.sp1[number - 1].bonuses.copy()
+
+        self.all_sprites = pygame.sprite.Group()
+        self.first = pygame.sprite.Group()
+        self.second = pygame.sprite.Group()
+        self.notouch = pygame.sprite.Group()
+        self.touch_but_nomove = pygame.sprite.Group()
+        self.player = pygame.sprite.Group()
+        self.play = pygame.sprite.Group()
+        self.power = pygame.sprite.Group()
+        self.ground = pygame.sprite.Group()
+        self.enemy = pygame.sprite.Group()
+        self.bonus = pygame.sprite.Group()
+        self.brick = pygame.sprite.Group()
+        self.ground_block = pygame.sprite.Group()
+        self.tube = pygame.sprite.Group()
+        self.zero = pygame.sprite.Group()
+        self.pause = pygame.sprite.Group()
+        self.win = pygame.sprite.Group()
+        self.sp = [None, Cloud, Big_Cloud, Brick, Ground, Bush, Big_Bush, Hill, Big_Hill, Bonus, Tube_Small, Tube_Sr, Tube_Big,
+            Block, Castle, None_tube, Turtle_Green, Mushrooms, Money, Mushroom_Power, Mario]
+
+    def generate_level(self, hero):
+        mario = None
+        for y in range(len(self.map)):
+            for x in range(len(self.map[y])):
+                if self.map[y][x] in [1, 2, 5, 6, 7, 8]:
+                    self.sp[self.map[y][x]](x, y, self.all_sprites, self.notouch, self.first)
+                elif self.map[y][x] == 14:
+                    self.sp[self.map[y][x]](x, y, self.all_sprites, self.notouch, self.first, self.win)
+                elif self.map[y][x] in [10, 11, 12]:
+                    self.sp[self.map[y][x]](x, y, self.all_sprites, self.ground_block, self.touch_but_nomove,
+                                            self.first)
+                    self.map = self.make_tube(self.map[y][x], x, y)
+                elif self.map[y][x] == 9 and ((x != 0 and self.map[y][x - 1] == 0) or (x != len(self.map[y]) - 1 and self.map[y][x + 1] == 0)):
+                    self.sp[self.map[y][x]](x, y, self.bonuss.pop(0), self.all_sprites, self.brick, self.bonus, self.ground,self.play, self.touch_but_nomove, self.first)
+                elif self.map[y][x] == 9:
+                    self.sp[self.map[y][x]](x, y, self.bonuss.pop(0), self.all_sprites, self.bonus, self.brick, self.ground, self.play, self.touch_but_nomove, self.first)
+                elif self.map[y][x] in [3, 4]:
+                    self.sp[self.map[y][x]](x, y, self.all_sprites, self.ground, self.brick, self.touch_but_nomove, self.first)
+                elif self.map[y][x] == 13:
+                    self.sp[self.map[y][x]](x, y, self.all_sprites, self.ground, self.brick, self.ground_block, self.touch_but_nomove, self.first)
+                elif self.map[y][x] in [16, 17]:
+                    self.sp[self.map[y][x]](x, y, [self.ground_block, self.ground, self.ground_block], self.enemy,  self.all_sprites, self.play, self.second)
+                elif self.map[y][x] == 20:
+                    mario = self.sp[self.map[y][x]](x, y, hero, [self.enemy, self.ground, self.brick, self.touch_but_nomove, self.ground_block, self.tube, self.win], self.all_sprites, self.player, self.second)
+        return mario
+
+    def make_tube(self, number,  x, y):
+        for i in range(2):
+            for j in range(number - 8):
+                self.map[y - j][x + i] = 15
+                self.sp[15](x + i, y - j, self.all_sprites, self.ground, self.brick, self.ground_block, self.touch_but_nomove, self.zero)
+        self.map[y][x] = number
+        return self.map
+
+
+def start_game(number, hero):
+    global width
+    maps = Map(number)
+    size = width, height = 800, 482
+    screen = pygame.display.set_mode(size)
+    clock = pygame.time.Clock()
+    mario = maps.generate_level(hero)
+    pausa = Pause(5, 10, maps.pause, maps.second)
+    go_menu = In_Menu(5, 60, maps.pause, maps.second)
+    camera = Camera(width, maps.enemy)
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN and pausa.rect.collidepoint(event.pos):
+                t = pausa.clicked()
+            elif event.type == pygame.MOUSEBUTTONDOWN and go_menu.rect.collidepoint(event.pos):
+                pass #переход в меню
+        pygame.display.flip()
+        screen.fill((132, 132, 255))
+        if mario.flag_die == 'kill':
             running = False
-        elif event.type == pygame.KEYDOWN:
-            pass
-    camera.update(all_sprites)
-    key = pygame.key.get_pressed()
-    mario.get_event(key, camera.x)
-    mario.update()
-    for el in play:
-        el.play(camera.x)
-    pygame.display.flip()
-    screen.fill((132, 132, 255))
-    bonus.draw(screen)
-    zero.draw(screen)
-    first.draw(screen)
-    second.draw(screen)
-    clock.tick(FPS)
-pygame.quit()
+            game_over()
+
+        else:
+            points_and_coins(screen, mario.points, mario.coins)
+            maps.bonus.draw(screen)
+            maps.zero.draw(screen)
+            maps.first.draw(screen)
+            maps.second.draw(screen)
+            if pausa.flag_not_paused:
+                camera.update(maps.all_sprites, mario)
+                key = pygame.key.get_pressed()
+                mario.get_event(key, camera.x)
+                mario.update()
+                for el in maps.play:
+                    el.play(camera.x)
+            else: screen.blit(t, ((screen.get_width() - t.get_width()) // 2, (screen.get_height() - t.get_height()) // 2))
+        clock.tick(40)
+
+
+def game_over():
+    screen.fill((0, 0, 0))
+    t = text('game over', (255, 255, 255), 70)
+    screen.blit(t, ((screen.get_width() - t.get_width()) // 2, (screen.get_height() - t.get_height()) // 2))
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                start_game(1, 'm')
+        pygame.display.flip()
+
+
+
+if __name__ == '__main__':
+    start_game(1, 'm')

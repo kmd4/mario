@@ -129,6 +129,33 @@ class Castle(Base):
 class None_tube(Base):
     image = load_image('None_tube.png', width=32, height=32)
 
+class Button(pygame.sprite.Sprite):
+    image = load_image('None_tube.png')
 
+    def __init__(self, x, y, *group):
+        super().__init__(*group)
+        self.image = self.image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+
+    def clicked(self):
+        pass
+
+class Pause(Button):
+    flag_not_paused = True
+    image = load_image('7.png', color_key=-1, width=50, height=50)
+
+
+    def clicked(self):
+        t = get_paused(self.flag_not_paused)
+        self.flag_not_paused = not self.flag_not_paused
+        return t
+
+class In_Menu(Button):
+    image = load_image('1.png', color_key=-1, width=50, height=50)
+
+
+class Again(Button):
+    image = load_image('16.png', color_key=-1, width=50, height=50)
 
 

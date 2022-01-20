@@ -1,6 +1,8 @@
 import pygame
 import os
 import sys
+import time
+import threading
 from Mario_Map import *
 
 
@@ -8,11 +10,15 @@ pygame.init()
 
 
 def up_mask(sprite1, sprite2):
-    print(sprite1.rect.center[1], sprite2.rect.top)
-    if sprite1.rect.center[1] < sprite2.rect.top:
-        print('Yes')
-    else:
-        print('no')
+    if sprite1.rect.y <= sprite2.rect.y:
+        return True
+    return False
+
+
+def start_sprite(sprite_group, off):
+    for el in sprite_group:
+        if el.speed_x == 0 and el.rect.x - off <= 0:
+            el.speed_x = el.speed_start_game
 
 
 def collidepoint_by_mask(sprite, group_sprite):
@@ -22,21 +28,21 @@ def collidepoint_by_mask(sprite, group_sprite):
             new.append(sp)
     return new
 
-
-def get_nearest_block(sprite, size_block, off):
+def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
+    mapp = World_1().map
     q1 = (sprite.rect.x + get_offset(sprite.image)[2] + off)
     q2 = (sprite.rect.x + sprite.image.get_width() - get_offset(sprite.image)[3] + off)
-    x1 = (q1 // size_block)
-    x2 = (q2 // size_block)
     z = sprite.rect.y + sprite.rect.height - get_offset(sprite.image)[1] - 34
     z1 = sprite.rect.y + get_offset(sprite.image)[0] - 34
+    x1 = (q1 // size_block)
+    x2 = (q2 // size_block)
     y = z // size_block
     y1 = z1 // size_block
     if z % size_block != 0:
         y += 1
     if z1 % size_block != 0:
         y1 += 1
-    mapp = World1_1.map
+    #print(x1, x2, y1, y)
     new, new_up, new_left, new_right = [], [], [], []
     if y > len(mapp) or x2 < 0:
         return ('kill',)
@@ -47,12 +53,12 @@ def get_nearest_block(sprite, size_block, off):
     #print(x1, x2, y1, y)
     for i in range(x1, x2 + 1):
         for j in range(y, len(mapp)):
-            if mapp[j][i] in [3, 4, 9, 13, 15]:
+            if mapp[j][i] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new.append((j, i, mapp[j][i]))
                 continue
     for i in range(x1, x2 + 1):
         for j in range(0, y1):
-            if mapp[j][i] in [3, 4, 9, 13, 15]:
+            if mapp[j][i] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_up.append((j, i, mapp[j][i]))
                 continue
     if len(new) != 0:
@@ -66,7 +72,7 @@ def get_nearest_block(sprite, size_block, off):
 
     for i in range(y1, y):
         for j in range(0, x1):
-            if mapp[i][j] in [3, 4, 9, 13, 15]:
+            if mapp[i][j] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_left.append((j, i, mapp[i][j]))
                 continue
     if len(new_left) != 0:
@@ -76,7 +82,7 @@ def get_nearest_block(sprite, size_block, off):
 
     for i in range(y1, y):
         for j in range(x2 + 1, len(mapp[0])):
-            if mapp[i][j] in [3, 4, 9, 13, 15]:
+            if mapp[i][j] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_right.append((j, i, mapp[i][j]))
                 continue
     if len(new_right) != 0:
@@ -86,15 +92,6 @@ def get_nearest_block(sprite, size_block, off):
     #print(sorted(new_left), sorted(new_right))#все свободно
     #print('minis', mini, mini1, mini2, mini3)
     return mini, mini1, mini2, mini3
-
-
-def make_tube(number, x, y, object, map, *arg):
-    map[y][x] = [map[y][x], 15]
-    for i in range(2):
-        for j in range(number - 8):
-            object(x + i, y - j, arg)
-            map[y - j][x + i] = 15
-    return map
 
 def flip(images):
     for i in range(len(images)):
@@ -145,6 +142,19 @@ def load_image(name, color_key=None, width=None, height=None):
     return image
 
 
+
+
+def points_and_coins(screen, p, c):
+    t1 = text(f'points: {p}', (255, 255, 255), 30)
+    t2 = text(f'coins: {c}', (255, 255, 255), 30)
+    screen.blit(t1, (screen.get_width() - 150, 10))
+    screen.blit(t2, (screen.get_width() - 150, 35))
+
+def get_paused(s):
+    if s:
+        t = text('pause', (255, 255, 255), 100)
+        return t
+
 def terminate():
     pygame.quit()
     sys.exit()
@@ -158,7 +168,8 @@ def load_music(name):
         print("Cant load music {} because: {}".format(name, ex))
 
 
-def text(text, color):
-    font = pygame.font.Font(None, 30)
+def text(text, color, size, font=None):
+    font = pygame.font.Font(font, size)
     string = font.render(text, 1, color)
     return string
+
