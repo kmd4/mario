@@ -1,5 +1,5 @@
 import pygame
-from Map_Draw1 import *
+from Map_Draw2 import *
 from start_sprite import *
 from Functions import *
 points = 0
