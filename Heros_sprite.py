@@ -46,7 +46,6 @@ class Moving(pygame.sprite.Sprite):
                 self.rect.x -= self.first_step
             h = get_nearest_block(self, self.height, offset)[0]
             if h == 'kill' or self.rect.x + self.width < 0:
-                print('kill')
                 self.kill()
             else:
                 if h[0] != None and h[0] > 0 and h[0] > self.offset_yy:
@@ -252,4 +251,3 @@ class Mushroom_Power(Moving):
 
 class Money(Moving):
     pass
-

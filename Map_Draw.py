@@ -9,7 +9,6 @@ class Camera:
         self.x = 0
         self.sprites_need_start = sprites_need_start
 
-
     def update(self, obj, mario):
         if mario.rect.x > self.width // 2:
             self.dx = mario.rect.x - (self.width // 2)
@@ -21,6 +20,7 @@ class Camera:
                 start_sprite(el, self.width)
             else:
                 start_sprite(el, mario.rect.x + self.width // 2)
+
 
 class Map():
     def __init__(self, number):

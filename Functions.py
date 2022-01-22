@@ -172,4 +172,3 @@ def text(text, color, size, font=None):
     font = pygame.font.Font(font, size)
     string = font.render(text, 1, color)
     return string
-

@@ -1,5 +1,6 @@
 from Map_Draw import *
 from Functions import *
+import os.path
 
 points = 0
 size = width, height = 800, 482
@@ -30,12 +31,16 @@ def data_result(points, coins):
 
 
 def read_result():
-    with open('data/result.txt', 'r', encoding='utf-8') as f1:
-        result = f1.readline()
-    with open('data/result.txt', 'w', encoding='utf-8') as f1:
-        if result == '':
+    if os.path.exists('data/result.txt'):
+        with open('data/result.txt', 'r', encoding='utf-8') as f1:
+            result = f1.readline()
+        with open('data/result.txt', 'w', encoding='utf-8') as f1:
+            f1.write(result)
+    else:
+        with open('data/result.txt', 'w', encoding='utf-8') as f1:
             result = f"{0} {0}"
-        f1.write(result)
+            f1.write(result)
+
     return f'points: {result.split()[0]} coins: {result.split()[1]}'
 
 
@@ -47,7 +52,7 @@ def start():
     OpenMenu(start_window_sprites)
     StartGame(start_window_sprites)
     screen.blit(load_image('first_window.png', width=width, height=height), (0, 0))
-    t = text(read_result(), (0, 130, 0), 50)
+    t = text(read_result(), (0, 130, 0), 30)
     screen.blit(t, (470, 20))
     start_window_sprites.draw(screen)
     running = True
