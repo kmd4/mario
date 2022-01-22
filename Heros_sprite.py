@@ -1,8 +1,4 @@
-from Functions import *
-import pygame
-import time
 from Background_sprites import *
-
 
 
 class Moving(pygame.sprite.Sprite):
@@ -29,7 +25,7 @@ class Moving(pygame.sprite.Sprite):
         self.offset = get_offset(self.image)
         self.offset_yy = min(map(lambda x: get_offset(x)[1], self.frames))
         self.offset_y += self.offset_yy
-        self.rect.bottomleft = (self.width * x + self.offset_x, self.height * (y + 1)  + self.offset_y)
+        self.rect.bottomleft = (self.width * x + self.offset_x, self.height * (y + 1) + self.offset_y)
         self.flag_fall = 0
         self.flag_kill = 0
 
@@ -67,20 +63,9 @@ class Moving(pygame.sprite.Sprite):
                 if self.flag_kill == 1:
                     self.kill_sprite()
                     if self.timer_kill == 0:
-                        self.kill()
+                        self.speed_x, self.speed_y = 0, 0
                 self.rect.x -= self.speed_x
                 self.rect.y += self.speed_y
-
-    def need_kill(self):
-        if self.rect.top.y <= 0:
-            self.kill()
-
-    def rise_up_slowly(self):
-        pass
-
-
-    def rise_up_fast(self):
-        pass
 
 
 class Turtle_Green(Moving):
@@ -99,9 +84,6 @@ class Turtle_Green(Moving):
             self.cur_frame = 0
             self.speed_x = -32
             self.flag_kill = 0
-
-
-
 
 
 class Mushrooms(Moving):
@@ -130,18 +112,16 @@ class Mario(pygame.sprite.Sprite):
     g = 2
     direct = 1
 
-
     def __init__(self, x, y, flag, arg, *group): #flag 'm' - mario, 'l' - luigi
         super().__init__(*group)
         self.arg = arg
         self.framesm = cut_sheet(self, self.sheet_m, 7, 1, 0, 7, 0, 1)
         self.framesl = cut_sheet(self, self.sheet_l, 7, 1, 0, 7, 0, 1)
         self.distin = {'m': self.framesm, 'l': self.framesl}
-        self.cur_frames =self.distin.get(flag)
+        self.cur_frames = self.distin.get(flag)
         self.cur_frame = 0
         self.image = self.cur_frames[self.cur_frame]
         self.rect = self.image.get_rect()
-        self.offset_yy = min(map(lambda x: get_offset(x)[1], self.distin.get(flag)))
         self.rect.bottomleft = (self.width * x + self.offset_x, self.height * (y + 1) + self.offset_y)
         self.speed_jump = 16
         self.speed_die = -16
@@ -151,40 +131,41 @@ class Mario(pygame.sprite.Sprite):
         self.flag_die = False
         self.points, self.coins = 0, 0
 
-
     def get_event(self, key, off):
         if not self.flag_die:
+            h = get_nearest_block(self, self.width, off, param=True)
+            if len(h) == 1:
+                self.flag_die = 1
+            else:
+                self.h, self.h1, self.h2, self.h3 = h
             if key == 'KEYUP' and self.flag_jump == 1:
                 self.flag_jump = key
             elif key != 'KEYUP':
-                h = get_nearest_block(self, self.width, off, self.speed_x, self.speed_y)
-                if len(h) == 1:
-                    self.flag_die = 1
-                else:
-                    self.h, self.h1, self.h2, self.h3 = h
-                    if not (key[pygame.K_RIGHT] or key[pygame.K_d] or key[pygame.K_LEFT] or key[pygame.K_a]):
-                        self.speed_x = 0
-                    if (key[pygame.K_UP] or key[pygame.K_w]) and self.flag_jump == 0:
-                        self.flag_jump = 1
-                    if not (key[pygame.K_UP] or key[pygame.K_w]) and self.flag_jump == 1:
-                        self.flag_jump = 2
-                    if (key[pygame.K_RIGHT] or key[pygame.K_d]) and (self.flag_stay == 0 or self.rect.x == 0):
-                        be, self.direct = self.direct, 1
-                        self.run(be)
-                    elif (key[pygame.K_LEFT] or key[pygame.K_a]) and self.flag_stay == 0 and not self.rect.x == 0:
-                        be, self.direct = self.direct, -1
-                        self.run(be)
+                if not (key[pygame.K_RIGHT] or key[pygame.K_d] or key[pygame.K_LEFT] or key[pygame.K_a]):
+                    self.speed_x = 0
+                if (key[pygame.K_UP] or key[pygame.K_w]) and self.flag_jump == 0:
+                    self.flag_jump = 1
+                if not (key[pygame.K_UP] or key[pygame.K_w]) and self.flag_jump == 1:
+                    self.flag_jump = 2
+                if (key[pygame.K_RIGHT] or key[pygame.K_d]) and (self.flag_stay == 0 or self.rect.x == 0):
+                    be, self.direct = self.direct, 1
+                    self.run(be)
+                elif self.rect.x == 0:
+                    self.stand()
+                elif key[pygame.K_LEFT] or key[pygame.K_a]:
+                    be, self.direct = self.direct, -1
+                    self.run(be)
 
     def update(self):
         if collidepoint_by_mask(self, self.arg[6]):
-            print('WIIIN')
+            return True
         k = collidepoint_by_mask(self, self.arg[0])
         if k and self.flag_jump in [2, 3] and up_mask(self, k[0]):
             k[0].flag_kill = 1
             self.points += 100
             self.flag_jump = 1
             self.max_jump_height = 1 * self.width // self.speed_jump
-        elif (k and k[0].flag_kill == 0):
+        elif k and k[0].flag_kill == 0:
             self.flag_die = 1
             self.speed_x = 0
         if self.flag_die == 1:
@@ -244,18 +225,13 @@ class Mario(pygame.sprite.Sprite):
             if self.h[0] != None: self.speed_y = min(self.speed_jump, self.h[0])
             else: self.speed_y = self.speed_jump
 
-
     def run(self, be):
-        if self.direct == 1 and self.flag_jump != 0 and self.h3[0] != None and self.h3[0] <= self.speed_x * 2: self.rect.x -= 3
-        elif self.direct == -1 and self.flag_jump != 0 and self.h2[0] != None and self.h2[0] <= abs(self.speed_x * 2): self.rect.x += 3
         if self.direct == 1:
-            if self.h3[0] != None and self.h3[0] > 3: self.speed_x = min(8, self.h3[0] - 3)
-            elif self.h3[0] == None: self.speed_x = 8
-            else: self.speed_x = 0
+            if self.h3[0] != None: self.speed_x = min(8, self.h3[0])
+            else: self.speed_x = 8
         else:
-            if self.h2[0] == None and not self.rect.x -8 <= 0: self.speed_x = -8
-            elif self.h2[0] and self.h2[0] > 3: self.speed_x = min(8, self.h2[0] - 3) * self.direct
-            else: self.speed_x = 0
+            if self.h2[0] != None: self.speed_x = min(8, self.h2[0]) * self.direct
+            else: self.speed_x = -8
         if be != self.direct:
             self.cur_frames = flip(self.cur_frames)
         run_frames = self.cur_frames[3:6]
@@ -268,9 +244,11 @@ class Mario(pygame.sprite.Sprite):
         self.speed_y = 0
         self.cur_frame = 0
 
+
 class Mushroom_Power(Moving):
     sheet = load_image('mush_power.png')
     columns, rows, a1, a2, b1, b2 = 0, 0, 0, 0, 0, 0
+
 
 class Money(Moving):
     pass

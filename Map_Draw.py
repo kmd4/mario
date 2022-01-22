@@ -1,26 +1,21 @@
-import pygame
-import os
-from Functions import *
-from Background_sprites import *
-from Mario_Map import *
 from Heros_sprite import *
 
 
 class Camera:
-    def __init__(self, width, *sprites_need_start):
+    def __init__(self, *sprites_need_start):
+        from main import width
         self.dx = 0
         self.width = width
         self.x = 0
         self.sprites_need_start = sprites_need_start
 
-    # позиционировать камеру на объекте target
+
     def update(self, obj, mario):
         if mario.rect.x > self.width // 2:
             self.dx = mario.rect.x - (self.width // 2)
             self.x += self.dx
             for el in obj:
                 el.rect.x -= self.dx
-            print('X', self.x)
         for el in self.sprites_need_start:
             if self.x == 0:
                 start_sprite(el, self.width)
@@ -32,7 +27,6 @@ class Map():
         self.sp1 = [World_1, World_2]
         self.map = self.sp1[number - 1].map.copy()
         self.bonuss = self.sp1[number - 1].bonuses.copy()
-
         self.all_sprites = pygame.sprite.Group()
         self.first = pygame.sprite.Group()
         self.second = pygame.sprite.Group()
@@ -88,16 +82,13 @@ class Map():
         return self.map
 
 
-def start_game(number, hero):
-    global width
-    maps = Map(number)
-    size = width, height = 800, 482
-    screen = pygame.display.set_mode(size)
-    clock = pygame.time.Clock()
-    mario = maps.generate_level(hero)
+def start_game():
+    from main import clock, FPS, Level, Hero
+    maps = Map(Level + 1)
+    mario = maps.generate_level(Hero)
     pausa = Pause(5, 10, maps.pause, maps.second)
     go_menu = In_Menu(5, 60, maps.pause, maps.second)
-    camera = Camera(width, maps.enemy)
+    camera = Camera(maps.enemy)
     running = True
     while running:
         for event in pygame.event.get():
@@ -106,13 +97,13 @@ def start_game(number, hero):
             elif event.type == pygame.MOUSEBUTTONDOWN and pausa.rect.collidepoint(event.pos):
                 t = pausa.clicked()
             elif event.type == pygame.MOUSEBUTTONDOWN and go_menu.rect.collidepoint(event.pos):
-                pass #переход в меню
+                running = False
+                go_menu.clicked()
         pygame.display.flip()
         screen.fill((132, 132, 255))
         if mario.flag_die == 'kill':
             running = False
             game_over()
-
         else:
             points_and_coins(screen, mario.points, mario.coins)
             maps.bonus.draw(screen)
@@ -123,11 +114,13 @@ def start_game(number, hero):
                 camera.update(maps.all_sprites, mario)
                 key = pygame.key.get_pressed()
                 mario.get_event(key, camera.x)
-                mario.update()
+                if mario.update():
+                    from main import EndGame
+                    EndGame(mario.points, mario.coins)
                 for el in maps.play:
                     el.play(camera.x)
             else: screen.blit(t, ((screen.get_width() - t.get_width()) // 2, (screen.get_height() - t.get_height()) // 2))
-        clock.tick(40)
+        clock.tick(FPS)
 
 
 def game_over():
@@ -140,10 +133,5 @@ def game_over():
             if event.type == pygame.QUIT:
                 terminate()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                start_game(1, 'm')
+                start_game()
         pygame.display.flip()
-
-
-
-if __name__ == '__main__':
-    start_game(1, 'm')

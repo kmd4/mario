@@ -1,10 +1,7 @@
 import pygame
 import os
 import sys
-import time
-import threading
 from Mario_Map import *
-
 
 pygame.init()
 
@@ -28,11 +25,18 @@ def collidepoint_by_mask(sprite, group_sprite):
             new.append(sp)
     return new
 
-def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
-    mapp = World_1().map
-    q1 = (sprite.rect.x + get_offset(sprite.image)[2] + off)
-    q2 = (sprite.rect.x + sprite.image.get_width() - get_offset(sprite.image)[3] + off)
-    z = sprite.rect.y + sprite.rect.height - get_offset(sprite.image)[1] - 34
+
+def get_nearest_block(sprite, size_block, off, param=False):
+    from main import Level
+    mapp = [World_1(), World_2()][Level].map
+    if not param:
+        q1 = (sprite.rect.x + get_offset(sprite.image)[2] + off)
+        q2 = (sprite.rect.x + sprite.image.get_width() - get_offset(sprite.image)[3] + off)
+        z = sprite.rect.y + sprite.rect.height - get_offset(sprite.image)[1] - 34
+    else:
+        q1 = (sprite.rect.x + off)
+        q2 = (sprite.rect.x + sprite.image.get_width() + off)
+        z = sprite.rect.y + sprite.rect.height - 34
     z1 = sprite.rect.y + get_offset(sprite.image)[0] - 34
     x1 = (q1 // size_block)
     x2 = (q2 // size_block)
@@ -42,7 +46,6 @@ def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
         y += 1
     if z1 % size_block != 0:
         y1 += 1
-    #print(x1, x2, y1, y)
     new, new_up, new_left, new_right = [], [], [], []
     if y > len(mapp) or x2 < 0:
         return ('kill',)
@@ -50,13 +53,12 @@ def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
         x2 -= 1
     if y1 == y:
         y1 -= 1
-    #print(x1, x2, y1, y)
-    for i in range(x1, x2 + 1):
+    for i in range(x1, x2):
         for j in range(y, len(mapp)):
             if mapp[j][i] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new.append((j, i, mapp[j][i]))
                 continue
-    for i in range(x1, x2 + 1):
+    for i in range(x1, x2):
         for j in range(0, y1):
             if mapp[j][i] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_up.append((j, i, mapp[j][i]))
@@ -71,17 +73,17 @@ def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
     else: mini1 = None, None
 
     for i in range(y1, y):
-        for j in range(0, x1):
+        for j in range(0, x1 + 1):
             if mapp[i][j] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_left.append((j, i, mapp[i][j]))
                 continue
     if len(new_left) != 0:
         mini2 = sorted(new_left)[-1]
-        mini2 = (q1 - (mini2[0] + 1) * size_block, mini2[-1])   #расстояние до ближайшего блока при падении
+        mini2 = (q1 - (mini2[0] + 1) * size_block, x2, x2, y1, y, mini2[-1])   #расстояние до ближайшего блока при падении
     else: mini2 = None, None  #все свободно
 
     for i in range(y1, y):
-        for j in range(x2 + 1, len(mapp[0])):
+        for j in range(x2, len(mapp[0])):
             if mapp[i][j] in [3, 4, 9, 13, 15, 10, 11, 12]:
                 new_right.append((j, i, mapp[i][j]))
                 continue
@@ -89,9 +91,8 @@ def get_nearest_block(sprite, size_block, off, speed_x=0, speed_y=0):
         mini3 = sorted(new_right)[0]
         mini3 = (mini3[0] * size_block - q2, mini3[-1])   #расстояние до ближайшего блока при падении
     else: mini3 = None, None
-    #print(sorted(new_left), sorted(new_right))#все свободно
-    #print('minis', mini, mini1, mini2, mini3)
     return mini, mini1, mini2, mini3
+
 
 def flip(images):
     for i in range(len(images)):
@@ -135,13 +136,10 @@ def load_image(name, color_key=None, width=None, height=None):
     if color_key is not None:
         if color_key == -1:
             color_key = image.get_at((0, 0))
-            print(color_key)
         image.set_colorkey(color_key)
     if width != None or height != None:
         image = pygame.transform.scale(image, (width, height))
     return image
-
-
 
 
 def points_and_coins(screen, p, c):
@@ -150,10 +148,12 @@ def points_and_coins(screen, p, c):
     screen.blit(t1, (screen.get_width() - 150, 10))
     screen.blit(t2, (screen.get_width() - 150, 35))
 
+
 def get_paused(s):
     if s:
         t = text('pause', (255, 255, 255), 100)
         return t
+
 
 def terminate():
     pygame.quit()

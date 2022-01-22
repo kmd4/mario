@@ -1,44 +1,54 @@
-import pygame
-from Map_Draw2 import *
-from start_sprite import *
+from Map_Draw import *
 from Functions import *
+
 points = 0
-
-
-pygame.init()
-ARIAL_50 = pygame.font.SysFont('arial', 25)
-clock = pygame.time.Clock()
-FPS = 50
-Hero = 'm'
+size = width, height = 800, 482
 heros_sprites = pygame.sprite.Group()
 start_window_sprites = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
+ARIAL_50 = pygame.font.SysFont('arial', 25)
+clock = pygame.time.Clock()
+FPS = 25
+Hero = 'm'
+Level = 0
+
+
+def next_lev():
+    global Level
+    Level = (Level + 1) % 2
 
 
 def data_result(points, coins):
-    with  open('data/result.txt', 'r', encoding='utf-8') as f1, open('data/result.txt', 'w', encoding='utf-8') as f2:
+    with open('data/result.txt', 'r', encoding='utf-8') as f1:
         result = f1.readline()
-        points_f, coins_f = result.split()[0].split(':')[1], result.split()[1].split(':')[1]
-        points = max(points_f, points)
-        coins = max(coins_f, coins)
-        f2.write(f"points:{points} coins:{coins}")
+        points_f, coins_f = result.split()[0], result.split()[1]
+        pointsmax = max(int(points_f), points)
+        coins = int(coins_f) + coins
+    with open('data/result.txt', 'w', encoding='utf-8') as f2:
+        f2.write(f'{pointsmax} {coins}')
+    return f'points: {points}  record: {pointsmax}'
+
+
+def read_result():
+    with open('data/result.txt', 'r', encoding='utf-8') as f1:
+        result = f1.readline()
+    with open('data/result.txt', 'w', encoding='utf-8') as f1:
+        if result == '':
+            result = f"{0} {0}"
+        f1.write(result)
+    return f'points: {result.split()[0]} coins: {result.split()[1]}'
 
 
 def start():
-    print(1)
     global start_window_sprites
-    size = width, height = 800, 450
-    screen = pygame.display.set_mode(size)
-    image = load_image('fon23.png')
-    image_rect = image.get_rect()
-    image_rect.center = (width // 2, height // 2)
-    screen.blit(image, image_rect)
     start_window_sprites = pygame.sprite.Group()
     pygame.display.set_caption('Mario Bros')
     pygame.display.set_icon(load_image('mar_icon.png'))
-    menu = OpenMenu(start_window_sprites)
-    start_game = StartGame(start_window_sprites)
-    screen.blit(load_image('sky.png'), (0, 0))
+    OpenMenu(start_window_sprites)
+    StartGame(start_window_sprites)
+    screen.blit(load_image('first_window.png', width=width, height=height), (0, 0))
+    t = text(read_result(), (0, 130, 0), 50)
+    screen.blit(t, (470, 20))
     start_window_sprites.draw(screen)
     running = True
     while running:
@@ -49,17 +59,60 @@ def start():
                 start_window_sprites.update(event)
         pygame.display.flip()
         clock.tick(FPS)
-    pygame.quit()
+    terminate()
+
+
+class EndGame:
+    def __init__(self, p, c):
+        Win_Game = pygame.sprite.Group()
+        running = True
+        ReGame(370, 300, Win_Game)
+        StartGame1(430, 300, Win_Game)
+        In_Menu(310, 300, Win_Game)
+        self.sky_image = load_image('menu_image.png', width=width, height=height)
+        screen.blit(self.sky_image, (0, 0))
+        Win_Game.draw(screen)
+        t = text('WIN', (0, 0, 0), 90)
+        res = text(data_result(p, c), (0, 0, 0), 40)
+
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    Win_Game.update(event)
+
+            screen.blit(self.sky_image, (0, 0))
+            Win_Game.draw(screen)
+            screen.blit(t, ((screen.get_width() - t.get_width()) // 2, 60))
+            screen.blit(res, ((screen.get_width() - res.get_width()) // 2, 180))
+            pygame.display.flip()
+            clock.tick(FPS)
+        terminate()
+
+
+class StartGame(pygame.sprite.Sprite):
+    image = load_image('start_game.png', color_key=-1, width=50, height=50)
+
+    def __init__(self, *group):
+        super().__init__(*group)
+        self.image = StartGame.image
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = 375, 325
+
+    def update(self, event):
+        if self.rect.collidepoint(event.pos):
+            from Map_Draw import start_game
+            start_game()
 
 
 class MarioChose(pygame.sprite.Sprite):
     image = load_image('mmario.png')
 
-    def __init__(self, *group):
+    def __init__(self, x, y,  *group):
         super().__init__(*group)
-        self.image = MarioChose.image
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = 150, 50
+        self.rect.x, self.rect.y = x, y
 
     def update(self, event):
         if self.rect.collidepoint(event.pos):
@@ -70,20 +123,15 @@ class MarioChose(pygame.sprite.Sprite):
 class LuidziChose(pygame.sprite.Sprite):
     image = load_image('lluidzi.png')
 
-    def __init__(self, *group):
+    def __init__(self, x, y,  *group):
         super().__init__(*group)
-        self.image = LuidziChose.image
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = 500, 50
+        self.rect.x, self.rect.y = x, y
 
     def update(self, event):
         if self.rect.collidepoint(event.pos):
             global Hero
             Hero = 'l'
-
-
-
-
 
 
 class Menu:
@@ -93,7 +141,7 @@ class Menu:
         self._current_option_index = 0
 
     def append_option(self, option, callback):
-        self._option_surfaces.append(pygame.font.SysFont('arial', 40).render(option, True, (255, 255, 255)))
+        self._option_surfaces.append(pygame.font.SysFont('arial', 40).render(option, True, (0, 0, 0)))
         self._callbacks.append(callback)
 
     def switch(self, direction):
@@ -107,39 +155,8 @@ class Menu:
             option_rect = option.get_rect()
             option_rect.topleft = (x, y + i * option_y_padding)
             if i == self._current_option_index:
-                pygame.draw.rect(surf, (0, 100, 0), option_rect)
+                pygame.draw.rect(surf, (250, 240, 230), option_rect)
             surf.blit(option, option_rect)
-
-class NextLevel: # окно - меню после завершения первого уровня
-    def __init__(self):
-        screen.blit(load_image('sky.png'), (0, 0))
-        menu = Menu()
-        menu.append_option('Пройти еще раз', start_game_world1())
-        menu.append_option('Следущий уровень', start_game_world2())
-        menu.append_option('Вернуться в меню', start())
-        running = True
-
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
-                        start()
-                    if event.key == 119:
-                        menu.switch(-1)
-                    if event.key == 115:
-                        menu.switch(1)
-                    if event.key == 13:
-                        menu.select()
-
-            screen.blit(load_image('sky.png'), (0, 0))
-            menu.draw(screen, 300, 100, 40)
-            pygame.display.flip()
-
-
-
 
 
 class OpenMenu(pygame.sprite.Sprite):
@@ -150,17 +167,11 @@ class OpenMenu(pygame.sprite.Sprite):
         self.image = OpenMenu.image_menu
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = 10, 10
-
-    def record(self):
-        sky_image = load_image('sky.png')
-        screen.blit(sky_image, (0, 0))
-        pygame.display.set_caption('Достижения')
-        #pygame.display.set_icon(pygame.image.load('data/mar_icon.png'))
+        self.sky_image = load_image('menu_image.png', width=width, height=height)
 
     def rules(self):
         pygame.display.set_caption('Правила')
-        #pygame.display.set_icon(pygame.image.load('data/mar_icon.png'))
-        screen.blit(load_image('sky.png'), (0, 0))
+        screen.blit(self.sky_image, (0, 0))
         text = ['Игрок движется слева направо по экрану в попытках',
                 'добраться до флага, означающего переход на следующий',
                 'уровень. Вокруг Марио разбросаны монеты, а специальные',
@@ -169,21 +180,21 @@ class OpenMenu(pygame.sprite.Sprite):
                 'секретные кирпичи могут содержать больше монет или',
                 'интересные бонусы. Игра заканчивается, когда',
                 'герой травмируется, падает в яму']
-        tille = pygame.font.SysFont('arial', 40).render('Правила игры:', True, (255, 255, 255))
+        tille = pygame.font.SysFont('arial', 40).render('Правила игры:', True, (0, 0, 0))
         textRect = tille.get_rect()
         textRect.center = (400, 50)
         running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    exit()
+                    terminate()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
-            screen.blit(load_image('sky.png'), (0, 0))
+            screen.blit(self.sky_image, (0, 0))
             screen.blit(tille, textRect)
             for i in range(len(text)):
-                line = ARIAL_50.render(text[i], True, (255, 255, 255))
+                line = ARIAL_50.render(text[i], True, (0, 0, 0))
                 lineRect = line.get_rect()
                 lineRect.center = (400, 90 + 25 * i)
                 screen.blit(line, lineRect)
@@ -191,20 +202,19 @@ class OpenMenu(pygame.sprite.Sprite):
 
     def chose_hero(self):
         pygame.display.set_caption('Выбор героя')
-        pygame.display.set_icon(load_image('mar_icon.png'))
-        screen.blit(load_image('sky.png'), (0, 0))
-        mario = MarioChose(heros_sprites)
-        luidzi = LuidziChose(heros_sprites)
+        screen.blit(self.sky_image, (0, 0))
+        mario = MarioChose(150, 50, heros_sprites)
+        luidzi = LuidziChose(500, 50, heros_sprites)
         heros_sprites.draw(screen)
         running = True
-        line = pygame.font.SysFont('arial', 40).render('Выберите героя', True, (255, 255, 255))
+        line = pygame.font.SysFont('arial', 40).render('Выберите героя', True, (0, 0, 0))
         lineRect = line.get_rect()
         lineRect.center = (400, 40)
         screen.blit(line, lineRect)
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    exit()
+                    terminate()
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if mario.rect.collidepoint(event.pos):
                         mario.update(event)
@@ -216,7 +226,7 @@ class OpenMenu(pygame.sprite.Sprite):
                     if event.key == pygame.K_ESCAPE:
                         running = False
 
-            screen.blit(load_image('sky.png'), (0, 0))
+            screen.blit(self.sky_image, (0, 0))
             screen.blit(line, lineRect)
             heros_sprites.draw(screen)
             pygame.display.flip()
@@ -225,36 +235,29 @@ class OpenMenu(pygame.sprite.Sprite):
     def update(self, event):
         if self.rect.collidepoint(event.pos):
             running = True
-            #screen.blit(load_image('sky.png'), (0, 0))
             menu = Menu()
             menu.append_option('Правила игры', lambda: self.rules())
-            menu.append_option('Рекорд', lambda: print('Рекорд'))
-            menu.append_option('Выбор героя', lambda: self.chose_hero())
+            menu.append_option(' Выбор героя ', lambda: self.chose_hero())
 
             while running:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        exit()
+                        terminate()
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             running = False
                         if event.key == 119:
                             menu.switch(-1)
-                            print('w')
                         if event.key == 115:
                             menu.switch(1)
-                            print('s')
                         if event.key == 13:
                             menu.select()
 
-                screen.blit(load_image('sky.png'), (0, 0))
-                menu.draw(screen, 300, 100, 40)
+                screen.blit(self.sky_image, (0, 0))
+                menu.draw(screen, 300, 150, 50)
                 pygame.display.flip()
                 clock.tick(FPS)
             start()
 
-
-
 if __name__ == '__main__':
-    print(1)
     start()
